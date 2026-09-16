@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مصر الآن لحظة بلحظة</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Noto+Kufi+Arabic:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#c8102e;
+    --red-dark:#960d22;
+    --red-darker:#6e0a1b;
+    --ink:#181818;
+    --muted:#6c6c6c;
+    --bg:#eef0f1;
+    --card:#ffffff;
+    --border:#e5e5e5;
+    --gold:#c9a24b;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 6px 16px rgba(0,0,0,.05);
+    --shadow-hover:0 10px 24px rgba(0,0,0,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#131111; --card:#1d1a1a; --ink:#f1ece9; --muted:#b7aeae; --border:#393232;
+      --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-hover:0 10px 24px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#131111; --card:#1d1a1a; --ink:#f1ece9; --muted:#b7aeae; --border:#393232;
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-hover:0 10px 24px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:'Tajawal','Noto Kufi Arabic',sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;}
+  a{color:inherit;text-decoration:none;}
+  img{max-width:100%;display:block;}
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ===== Brand mark ===== */
+  .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(145deg,var(--red),var(--red-darker));display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .mark svg{width:18px;height:18px;}
+
+  /* ===== Top utility bar ===== */
+  .topbar{background:var(--red-darker);color:#f4e9ea;font-size:12.5px;}
+  .topbar .wrap{display:flex;justify-content:space-between;align-items:center;padding:7px 16px;overflow-x:auto;white-space:nowrap;gap:14px;}
+  .topbar .links a{margin-inline-start:16px;opacity:.85;}
+  .topbar .links a:hover{opacity:1;text-decoration:underline;}
+
+  /* ===== Header ===== */
+  .header{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;padding:16px 16px;gap:18px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .txt{display:flex;flex-direction:column;}
+  .brand .logo{font-family:'Noto Kufi Arabic',sans-serif;font-weight:900;font-size:28px;color:var(--ink);letter-spacing:-.3px;}
+  .brand .logo span{color:var(--red);}
+  .brand .tagline{font-size:11.5px;color:var(--muted);margin-top:1px;}
+  .header-actions{display:flex;align-items:center;gap:10px;}
+  .search-box{display:flex;border:1px solid var(--border);border-radius:22px;overflow:hidden;background:var(--bg);}
+  .search-box input{border:none;padding:9px 14px;font-family:inherit;background:transparent;color:var(--ink);width:150px;font-size:13.5px;}
+  .search-box input:focus{outline:none;}
+  .search-box button{background:transparent;border:none;color:var(--muted);padding:0 14px;font-size:13px;}
+  .admin-link{background:var(--ink);color:var(--card);padding:9px 18px;border-radius:22px;font-size:13px;font-weight:700;transition:background .15s;}
+  .admin-link:hover{background:var(--red);color:#fff;}
+
+  /* ===== Nav ===== */
+  .nav{background:var(--ink);position:sticky;top:0;z-index:19;}
+  .header + .nav{top:0;}
+  .nav .wrap{display:flex;overflow-x:auto;}
+  .nav a{display:block;padding:12px 18px;color:rgba(255,255,255,.78);font-weight:700;font-size:14px;white-space:nowrap;border-bottom:3px solid transparent;transition:.15s;}
+  .nav a:hover{color:#fff;}
+  .nav a.active{color:#fff;border-bottom-color:var(--red);}
+
+  /* ===== Ticker ===== */
+  .ticker{background:var(--card);border-bottom:1px solid var(--border);}
+  .ticker .wrap{display:flex;align-items:center;gap:14px;padding:9px 16px;}
+  .ticker .badge{background:var(--red);color:#fff;font-weight:800;font-size:11.5px;padding:5px 12px;border-radius:20px;flex-shrink:0;}
+  .ticker .track-outer{overflow:hidden;flex:1;-webkit-mask-image:linear-gradient(to left, transparent, #000 5%, #000 95%, transparent);mask-image:linear-gradient(to left, transparent, #000 5%, #000 95%, transparent);}
+  .ticker .track{display:flex;gap:44px;white-space:nowrap;animation:scrollTicker 32s linear infinite;}
+  .ticker .track span{font-size:13.5px;color:var(--ink);}
+  @keyframes scrollTicker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+  /* ===== Layout ===== */
+  .main-grid{display:grid;grid-template-columns:2.15fr 1fr;gap:24px;padding:24px 0 10px;align-items:start;}
+  @media (max-width:880px){.main-grid{grid-template-columns:1fr;}}
+
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:30px 0 15px;}
+  .section-title h2{font-size:18px;margin:0;font-weight:800;display:flex;align-items:center;gap:9px;}
+  .section-title h2::before{content:"";width:5px;height:20px;background:var(--red);border-radius:2px;}
+  .section-title a{font-size:12px;color:var(--muted);font-weight:700;}
+  .section-title a:hover{color:var(--red);}
+
+  /* Hero */
+  .hero{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;animation:fadeUp .5s ease both;}
+  @media (max-width:640px){.hero{grid-template-columns:1fr;}}
+  .hero-main{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s, transform .2s;}
+  .hero-main:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px);}
+  .hero-main .img{aspect-ratio:16/9;background:
+      radial-gradient(circle at 75% 20%, rgba(255,255,255,.12), transparent 45%),
+      linear-gradient(135deg,var(--red-darker),var(--red) 60%,#e0475f);
+      position:relative;overflow:hidden;}
+  .hero-main .img::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px);background-size:16px 16px;opacity:.5;}
+  .hero-main .body{padding:18px 20px 20px;}
+  .hero-main .cat{display:inline-block;background:var(--red);color:#fff;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:10px;}
+  .hero-main h1{font-family:'Noto Kufi Arabic',sans-serif;font-size:23px;line-height:1.5;margin:0 0 10px;font-weight:800;}
+  .hero-main .meta{font-size:12px;color:var(--muted);}
+  .hero-side{display:flex;flex-direction:column;gap:10px;}
+  .side-item{display:flex;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;transition:box-shadow .2s, transform .2s;}
+  .side-item:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px);}
+  .side-item .thumb{width:78px;height:58px;flex-shrink:0;border-radius:6px;background:linear-gradient(135deg,#3d3d3d,#161616);position:relative;overflow:hidden;}
+  .side-item .thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg, rgba(200,16,46,.35), transparent 60%);}
+  .side-item .txt h3{font-size:13.5px;margin:0 0 5px;font-weight:700;line-height:1.45;}
+  .side-item .txt .meta{font-size:10.5px;color:var(--muted);}
+
+  /* Cards grid */
+  .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  @media (max-width:760px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:480px){.cards-grid{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow);transition:box-shadow .2s, transform .2s;}
+  .card:hover{box-shadow:var(--shadow-hover);transform:translateY(-3px);}
+  .card .img{aspect-ratio:16/10;background:linear-gradient(135deg,#2c2c2c,#0f0f0f);position:relative;overflow:hidden;}
+  .card .img::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg, rgba(200,16,46,.30), transparent 65%);}
+  .card .body{padding:12px 14px 14px;flex:1;display:flex;flex-direction:column;}
+  .card .cat-tag{font-size:10.5px;font-weight:700;color:var(--red);margin-bottom:6px;}
+  .card h3{font-size:14.5px;margin:0 0 10px;font-weight:700;line-height:1.5;flex:1;}
+  .card .meta{font-size:11px;color:var(--muted);}
+
+  /* Sidebar */
+  .sidebar-box{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;box-shadow:var(--shadow);}
+  .sidebar-box h3{margin:0 0 14px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;}
+  .sidebar-box h3::before{content:"";width:5px;height:18px;background:var(--red);border-radius:2px;}
+  .trend-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+  .trend-item:last-child{border-bottom:none;padding-bottom:0;}
+  .trend-item:first-child{padding-top:0;}
+  .trend-item .num{font-family:'Noto Kufi Arabic',sans-serif;font-weight:900;color:var(--border);-webkit-text-stroke:1px var(--red);font-size:20px;width:26px;flex-shrink:0;}
+  .trend-item h4{font-size:13px;margin:0;font-weight:700;line-height:1.5;}
+  .trend-item h4:hover{color:var(--red);}
+
+  /* Article page */
+  .article-page{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:26px;margin:24px 0;box-shadow:var(--shadow);animation:fadeUp .35s ease both;}
+  .article-page .cat{display:inline-block;background:var(--red);color:#fff;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:12px;}
+  .article-page h1{font-family:'Noto Kufi Arabic',sans-serif;font-size:26px;line-height:1.55;margin:0 0 12px;font-weight:800;}
+  .article-page .meta{font-size:12.5px;color:var(--muted);margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+  .article-section{margin-bottom:22px;}
+  .article-section h2{font-size:17.5px;font-weight:800;color:var(--red-dark);margin:0 0 9px;padding-inline-start:12px;border-inline-start:4px solid var(--red);}
+  .article-section p{font-size:16px;margin:0;white-space:pre-line;}
+  .back-link{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;font-weight:700;color:var(--red);font-size:14px;}
+
+  /* Footer */
+  .footer{background:var(--ink);color:#e7e2e2;margin-top:36px;padding:30px 0 20px;font-size:13px;}
+  .footer .top-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;padding-bottom:20px;}
+  .footer .brand-col{display:flex;align-items:center;gap:10px;}
+  .footer .brand-col .logo{font-family:'Noto Kufi Arabic',sans-serif;font-weight:900;font-size:19px;color:#fff;}
+  .footer .cols{display:flex;gap:36px;flex-wrap:wrap;}
+  .footer .cols div h4{margin:0 0 10px;font-size:13.5px;color:#fff;}
+  .footer .cols div a{display:block;opacity:.75;margin-bottom:6px;}
+  .footer .cols div a:hover{opacity:1;}
+  .footer .bottom{text-align:center;opacity:.55;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);}
+
+  .empty-note{padding:36px;text-align:center;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:10px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ===================== SHARED CLOUD DATA LAYER =====================
+   Uses the same Firebase Realtime Database node as admin.html, so any
+   news published from the admin panel appears here for every visitor,
+   from any device, in real time. */
+const firebaseConfig = {
+  apiKey: "AIzaSyDN7uLYTFRWBb9x5dTV-bYr6iPA_YLq9VM",
+  authDomain: "dosha-games.firebaseapp.com",
+  databaseURL: "https://dosha-games-default-rtdb.firebaseio.com",
+  projectId: "dosha-games",
+  storageBucket: "dosha-games.firebasestorage.app",
+  messagingSenderId: "584565662439",
+  appId: "1:584565662439:web:775e8d06b3cab9d54bb842"
+};
+firebase.initializeApp(firebaseConfig);
+const dbRef = firebase.database().ref('egyptNewsData');
+let currentData = null;
+
+function defaultData(){
+  const now = Date.now();
+  return {
+    siteName: 'مصر الآن لحظة بلحظة',
+    tagline: 'موقعك الإخباري الأول .. لحظة بلحظة',
+    admin: { username: 'admin', password: '1234' },
+    categories: ['سياسة','حوادث','رياضة','فن ومشاهير','اقتصاد','تكنولوجيا','منوعات'],
+    articles: [
+      { id:'t1', title:'قصة نجاح يوسف .. كيف تحول من موظف بسيط إلى رائد أعمال؟', category:'منوعات', date:new Date(now-1000*60*30).toISOString(),
+        sections:[
+          {subTitle:'كيف نشأ يوسف', body:'ولد يوسف في أسرة بسيطة، وتعلم منذ الصغر قيمة العمل الجاد والاجتهاد في الدراسة، ما شكل شخصيته لاحقاً.'},
+          {subTitle:'أهم صفات يوسف', body:'يتميز يوسف بالإصرار وعدم الاستسلام أمام العقبات، إلى جانب قدرته على بناء علاقات قوية مع من حوله.'},
+          {subTitle:'بداية مشروعه الخاص', body:'بدأ يوسف مشروعه الأول برأس مال بسيط، واعتمد على الجودة وخدمة العملاء ليكسب ثقة السوق تدريجياً.'}
+        ]},
+      { id:'t2', title:'الحكومة تعلن عن حزمة إجراءات اقتصادية جديدة لدعم الأسر', category:'اقتصاد', date:new Date(now-1000*60*60*2).toISOString(),
+        sections:[{subTitle:'تفاصيل القرار', body:'أعلنت الحكومة عن مجموعة من الإجراءات الجديدة التي تستهدف دعم الأسر الأولى بالرعاية خلال الفترة المقبلة.'}]},
+      { id:'t3', title:'المنتخب يستعد لمواجهة قوية في تصفيات كأس العالم', category:'رياضة', date:new Date(now-1000*60*60*5).toISOString(),
+        sections:[{subTitle:'أجواء المعسكر', body:'يخوض المنتخب معسكراً مكثفاً استعداداً للمباراة المرتقبة، وسط حالة من التفاؤل بين الجهازين الفني والإداري.'}]},
+      { id:'t4', title:'وزير الخارجية يبحث مع نظيره الأوروبي ملفات التعاون المشترك', category:'سياسة', date:new Date(now-1000*60*60*8).toISOString(),
+        sections:[{subTitle:'محاور اللقاء', body:'ناقش الوزيران آخر التطورات الإقليمية وسبل تعزيز التعاون الثنائي بين البلدين في مختلف المجالات.'}]},
+      { id:'t5', title:'إطلاق أحدث إصدار من تطبيقات الهواتف الذكية في مصر', category:'تكنولوجيا', date:new Date(now-1000*60*60*12).toISOString(),
+        sections:[{subTitle:'أبرز المزايا', body:'يأتي الإصدار الجديد بمجموعة من المزايا التي تستهدف تحسين تجربة المستخدم وسرعة الأداء.'}]},
+      { id:'t6', title:'نجم الدراما المصرية يكشف تفاصيل عمله الجديد', category:'فن ومشاهير', date:new Date(now-1000*60*60*18).toISOString(),
+        sections:[{subTitle:'كواليس العمل', body:'كشف الفنان عن كواليس عمله الجديد الذي يخوض به تجربة مختلفة عن أعماله السابقة.'}]},
+      { id:'t7', title:'ضبط تشكيل عصابي تخصص في النصب على المواطنين', category:'حوادث', date:new Date(now-1000*60*60*22).toISOString(),
+        sections:[{subTitle:'تفاصيل الواقعة', body:'تمكنت الأجهزة الأمنية من ضبط التشكيل العصابي بعد بلاغات من عدد من المواطنين المتضررين.'}]}
+    ]
+  };
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtDate(iso){ try{ return new Date(iso).toLocaleString('ar-EG',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function sortedArticles(data){ return [...data.articles].sort((a,b)=> new Date(b.date) - new Date(a.date)); }
+
+const MARK_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12H7L9.5 5L14 19L16.5 12H22" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/* ===================== ROUTER ===================== */
+window.addEventListener('hashchange', render);
+
+dbRef.on('value', snap => {
+  let val = snap.val();
+  if(!val){ val = defaultData(); dbRef.set(val); }
+  currentData = val;
+  if(!currentData.articles) currentData.articles = [];
+  if(Array.isArray(currentData.articles) === false) currentData.articles = Object.values(currentData.articles);
+  render();
+}, err => {
+  console.error(err);
+  document.getElementById('app').innerHTML = `<div class="empty-note" style="margin:60px auto;max-width:480px;">تعذر الاتصال بقاعدة البيانات السحابية. تأكد من الاتصال بالإنترنت وحاول تحديث الصفحة.</div>`;
+});
+
+function render(){
+  const app = document.getElementById('app');
+  if(!currentData){ app.innerHTML = `<div class="empty-note" style="margin:60px auto;max-width:480px;">جارِ تحميل الموقع...</div>`; return; }
+  const data = currentData;
+  document.title = data.siteName;
+  const hash = location.hash || '#/home';
+  if(hash.startsWith('#/article/')) return renderArticlePage(data, decodeURIComponent(hash.split('/')[2]));
+  if(hash.startsWith('#/category/')) return renderSitePage(data, decodeURIComponent(hash.split('/')[2]));
+  return renderSitePage(data, null);
+}
+
+function chrome(data, activeCat, inner){
+  const cats = data.categories.map(c=>`<a href="#/category/${encodeURIComponent(c)}" class="${activeCat===c?'active':''}">${esc(c)}</a>`).join('');
+  const latest = sortedArticles(data).slice(0,8).map(a=>esc(a.title));
+  const track = latest.length ? (latest.map(t=>`<span>${t}</span>`).join('')+latest.map(t=>`<span>${t}</span>`).join('')) : '<span>لا توجد أخبار عاجلة حالياً</span>';
+  return `
+  <div class="topbar"><div class="wrap">
+    <div>${esc(new Date().toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'}))}</div>
+    <div class="links"></div>
+  </div></div>
+  <div class="header"><div class="wrap header-inner">
+    <a href="#/home" class="brand">
+      <div class="mark">${MARK_SVG}</div>
+      <div class="txt"><span class="logo">${esc(data.siteName.split(' ')[0]||'')} <span>${esc(data.siteName.split(' ').slice(1).join(' '))}</span></span><span class="tagline">${esc(data.tagline||'')}</span></div>
+    </a>
+    <div class="header-actions">
+      <div class="search-box"><input type="text" placeholder="ابحث في الموقع..."><button>&#128269;</button></div>
+    </div>
+  </div></div>
+  <div class="nav"><div class="wrap">
+    <a href="#/home" class="${!activeCat?'active':''}">الرئيسية</a>
+    ${cats}
+  </div></div>
+  <div class="ticker"><div class="wrap">
+    <span class="badge">عاجل</span>
+    <div class="track-outer"><div class="track">${track}</div></div>
+  </div></div>
+  <div class="wrap">${inner}</div>
+  <div class="footer"><div class="wrap">
+    <div class="top-row">
+      <div class="brand-col"><div class="mark">${MARK_SVG}</div><span class="logo">${esc(data.siteName)}</span></div>
+      <div class="cols">
+        <div><h4>الموقع</h4><a href="#/home">الرئيسية</a></div>
+        <div><h4>أقسام مختارة</h4>${data.categories.slice(0,4).map(c=>`<a href="#/category/${encodeURIComponent(c)}">${esc(c)}</a>`).join('')}</div>
+      </div>
+    </div>
+    <div class="bottom">جميع الحقوق محفوظة &copy; ${new Date().getFullYear()} — ${esc(data.siteName)}</div>
+  </div></div>`;
+}
+
+function renderSitePage(data, activeCat){
+  const app = document.getElementById('app');
+  let list = sortedArticles(data);
+  if(activeCat) list = list.filter(a=>a.category===activeCat);
+  if(list.length===0){
+    app.innerHTML = chrome(data, activeCat, `<div class="empty-note" style="margin-top:24px;">لا توجد أخبار في هذا القسم حتى الآن.</div>`);
+    return;
+  }
+  let inner = '';
+  if(!activeCat){
+    const featured = list[0], sideList = list.slice(1,5);
+    inner += `<div class="hero">
+      <a href="#/article/${featured.id}" class="hero-main">
+        <div class="img" style="${featured.image ? `background-image:url('${esc(featured.image)}');background-size:cover;background-position:center;` : ''}"></div>
+        <div class="body"><span class="cat">${esc(featured.category)}</span><h1>${esc(featured.title)}</h1><div class="meta">${fmtDate(featured.date)}</div></div>
+      </a>
+      <div class="hero-side">${sideList.map(a=>`
+        <a href="#/article/${a.id}" class="side-item"><div class="thumb" style="${a.image ? `background-image:url('${esc(a.image)}');background-size:cover;background-position:center;` : ''}"></div>
+          <div class="txt"><h3>${esc(a.title)}</h3><div class="meta">${esc(a.category)} · ${fmtDate(a.date)}</div></div>
+        </a>`).join('')}
+      </div>
+    </div>`;
+    data.categories.forEach(cat=>{
+      const items = list.filter(a=>a.category===cat).slice(0,3);
+      if(items.length===0) return;
+      inner += `<div class="section-title"><h2>${esc(cat)}</h2><a href="#/category/${encodeURIComponent(cat)}">كل الأخبار &laquo;</a></div>
+      <div class="cards-grid">${items.map(a=>`
+        <a href="#/article/${a.id}" class="card"><div class="img" style="${a.image ? `background-image:url('${esc(a.image)}');background-size:cover;background-position:center;` : ''}"></div>
+          <div class="body"><span class="cat-tag">${esc(a.category)}</span><h3>${esc(a.title)}</h3><div class="meta">${fmtDate(a.date)}</div></div>
+        </a>`).join('')}</div>`;
+    });
+  } else {
+    inner += `<div class="section-title"><h2>${esc(activeCat)}</h2></div>
+    <div class="cards-grid">${list.map(a=>`
+      <a href="#/article/${a.id}" class="card"><div class="img" style="${a.image ? `background-image:url('${esc(a.image)}');background-size:cover;background-position:center;` : ''}"></div>
+        <div class="body"><span class="cat-tag">${esc(a.category)}</span><h3>${esc(a.title)}</h3><div class="meta">${fmtDate(a.date)}</div></div>
+      </a>`).join('')}</div>`;
+  }
+  const trending = sortedArticles(data).slice(0,6);
+  inner = `<div class="main-grid"><div>${inner}</div><div>
+    <div class="sidebar-box"><h3>الأكثر قراءة</h3>
+      ${trending.map((a,i)=>`<a href="#/article/${a.id}" class="trend-item"><span class="num">${i+1}</span><h4>${esc(a.title)}</h4></a>`).join('')}
+    </div>
+  </div></div>`;
+  app.innerHTML = chrome(data, activeCat, inner);
+}
+
+function renderArticlePage(data, id){
+  const app = document.getElementById('app');
+  const article = data.articles.find(a=>a.id===id);
+  if(!article){
+    app.innerHTML = chrome(data, null, `<div class="empty-note" style="margin-top:24px;">الخبر غير موجود. <a href="#/home" style="color:var(--red);font-weight:700;">عودة للرئيسية</a></div>`);
+    return;
+  }
+  const inner = `<div class="article-page">
+    <a href="#/home" class="back-link">&raquo; عودة للرئيسية</a>
+    <span class="cat">${esc(article.category)}</span>
+    <h1>${esc(article.title)}</h1>
+    <div class="meta">${fmtDate(article.date)}</div>
+    ${article.image ? `<img src="${esc(article.image)}" alt="" style="width:100%;border-radius:8px;margin-bottom:20px;" onerror="this.style.display='none';">` : ''}
+    ${(article.sections||[]).map(s=>`<div class="article-section"><h2>${esc(s.subTitle)}</h2><p>${esc(s.body)}</p></div>`).join('')}
+  </div>`;
+  app.innerHTML = chrome(data, null, inner);
+}
+</script>
+</body>
+</html>
