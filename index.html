@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="Cr99xy1EZYvZom5VuwbhLQmgvd4a4IrCvj3Elp3dZgw" />
 <title>مصر الآن لحظة بلحظة</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -22,6 +23,7 @@
     --gold:#c9a24b;
     --shadow:0 1px 2px rgba(0,0,0,.04), 0 6px 16px rgba(0,0,0,.05);
     --shadow-hover:0 10px 24px rgba(0,0,0,.10);
+    --surface-dark:#181818;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
@@ -67,11 +69,11 @@
   .search-box input{border:none;padding:9px 14px;font-family:inherit;background:transparent;color:var(--ink);width:150px;font-size:13.5px;}
   .search-box input:focus{outline:none;}
   .search-box button{background:transparent;border:none;color:var(--muted);padding:0 14px;font-size:13px;}
-  .admin-link{background:var(--ink);color:var(--card);padding:9px 18px;border-radius:22px;font-size:13px;font-weight:700;transition:background .15s;}
+  .admin-link{display:none;}
   .admin-link:hover{background:var(--red);color:#fff;}
 
   /* ===== Nav ===== */
-  .nav{background:var(--ink);position:sticky;top:0;z-index:19;}
+  .nav{background:var(--surface-dark);position:sticky;top:0;z-index:19;}
   .header + .nav{top:0;}
   .nav .wrap{display:flex;overflow-x:auto;}
   .nav a{display:block;padding:12px 18px;color:rgba(255,255,255,.78);font-weight:700;font-size:14px;white-space:nowrap;border-bottom:3px solid transparent;transition:.15s;}
@@ -154,7 +156,7 @@
   .back-link{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;font-weight:700;color:var(--red);font-size:14px;}
 
   /* Footer */
-  .footer{background:var(--ink);color:#e7e2e2;margin-top:36px;padding:30px 0 20px;font-size:13px;}
+  .footer{background:var(--surface-dark);color:#e7e2e2;margin-top:36px;padding:30px 0 20px;font-size:13px;}
   .footer .top-row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;padding-bottom:20px;}
   .footer .brand-col{display:flex;align-items:center;gap:10px;}
   .footer .brand-col .logo{font-family:'Noto Kufi Arabic',sans-serif;font-weight:900;font-size:19px;color:#fff;}
@@ -165,6 +167,20 @@
   .footer .bottom{text-align:center;opacity:.55;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);}
 
   .empty-note{padding:36px;text-align:center;color:var(--muted);background:var(--card);border:1px dashed var(--border);border-radius:10px;}
+
+  /* Breaking badge on cards/hero */
+  .brk-badge{display:inline-flex;align-items:center;gap:4px;background:#fff;color:var(--red);font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;margin-inline-end:6px;}
+  .brk-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--red);}
+  .card .cat-tag-row, .side-item .cat-tag-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+
+  /* Coming soon / scheduled teaser section */
+  .soon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:760px){.soon-grid{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:480px){.soon-grid{grid-template-columns:1fr;}}
+  .soon-card{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:14px;opacity:.9;}
+  .soon-badge{display:inline-flex;align-items:center;gap:5px;background:var(--gold);color:#2a2205;font-size:10.5px;font-weight:800;padding:4px 11px;border-radius:20px;margin-bottom:8px;}
+  .soon-card h4{font-size:13.5px;margin:0 0 6px;font-weight:700;line-height:1.5;}
+  .soon-card .meta{font-size:11px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -219,12 +235,54 @@ function defaultData(){
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtDate(iso){ try{ return new Date(iso).toLocaleString('ar-EG',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
-function sortedArticles(data){ return [...data.articles].sort((a,b)=> new Date(b.date) - new Date(a.date)); }
+
+/* ---- Breaking news + scheduled publishing helpers ---- */
+function isBreakingActive(a){
+  if(!a.breakingUntil) return false;
+  return new Date(a.breakingUntil).getTime() > Date.now();
+}
+function isPublished(a){
+  if(a.publishMode === 'soon') return false;
+  if(a.publishMode === 'scheduled'){
+    if(!a.publishAt) return true;
+    return new Date(a.publishAt).getTime() <= Date.now();
+  }
+  return true; // 'now' or legacy articles with no publishMode
+}
+function isUpcoming(a){
+  if(a.publishMode === 'soon') return true;
+  if(a.publishMode === 'scheduled' && a.publishAt) return new Date(a.publishAt).getTime() > Date.now();
+  return false;
+}
+function upcomingArticles(data){
+  return (data.articles||[]).filter(isUpcoming).sort((a,b)=> new Date(a.publishAt||a.date) - new Date(b.publishAt||b.date));
+}
+function countdownLabel(a){
+  if(a.publishMode!=='scheduled' || !a.publishAt) return 'بعد قليل';
+  const diffMs = new Date(a.publishAt).getTime() - Date.now();
+  if(diffMs<=0) return 'بعد قليل';
+  const hrs = Math.round(diffMs/3600000);
+  if(hrs<1) return 'ينشر خلال دقائق';
+  if(hrs===1) return 'ينشر خلال ساعة تقريباً';
+  return `ينشر خلال ${hrs} ساعة تقريباً`;
+}
+function sortedArticles(data){
+  const list = (data.articles||[]).filter(isPublished);
+  return list.sort((a,b)=>{
+    const ab = isBreakingActive(a), bb = isBreakingActive(b);
+    if(ab !== bb) return ab ? -1 : 1;
+    return new Date(b.date) - new Date(a.date);
+  });
+}
 
 const MARK_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 12H7L9.5 5L14 19L16.5 12H22" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /* ===================== ROUTER ===================== */
 window.addEventListener('hashchange', render);
+/* Re-render periodically so breaking-news timers expire and scheduled
+   "coming soon" articles flip to fully published automatically, without
+   needing a page reload. */
+setInterval(render, 20000);
 
 dbRef.on('value', snap => {
   let val = snap.val();
@@ -251,7 +309,8 @@ function render(){
 
 function chrome(data, activeCat, inner){
   const cats = data.categories.map(c=>`<a href="#/category/${encodeURIComponent(c)}" class="${activeCat===c?'active':''}">${esc(c)}</a>`).join('');
-  const latest = sortedArticles(data).slice(0,8).map(a=>esc(a.title));
+  const breakingNow = (data.articles||[]).filter(a=>isBreakingActive(a) && isPublished(a)).sort((a,b)=> new Date(b.date)-new Date(a.date));
+  const latest = breakingNow.map(a=>esc(a.title));
   const track = latest.length ? (latest.map(t=>`<span>${t}</span>`).join('')+latest.map(t=>`<span>${t}</span>`).join('')) : '<span>لا توجد أخبار عاجلة حالياً</span>';
   return `
   <div class="topbar"><div class="wrap">
@@ -298,15 +357,16 @@ function renderSitePage(data, activeCat){
   }
   let inner = '';
   if(!activeCat){
-    const featured = list[0], sideList = list.slice(1,5);
+    const featured = list.find(a=>a.isFeatured) || list[0];
+    const sideList = list.filter(a=>a.id!==featured.id).slice(0,4);
     inner += `<div class="hero">
       <a href="#/article/${featured.id}" class="hero-main">
         <div class="img" style="${featured.image ? `background-image:url('${esc(featured.image)}');background-size:cover;background-position:center;` : ''}"></div>
-        <div class="body"><span class="cat">${esc(featured.category)}</span><h1>${esc(featured.title)}</h1><div class="meta">${fmtDate(featured.date)}</div></div>
+        <div class="body">${isBreakingActive(featured)?'<span class="brk-badge">عاجل</span>':''}<span class="cat">${esc(featured.category)}</span><h1>${esc(featured.title)}</h1><div class="meta">${fmtDate(featured.date)}</div></div>
       </a>
       <div class="hero-side">${sideList.map(a=>`
         <a href="#/article/${a.id}" class="side-item"><div class="thumb" style="${a.image ? `background-image:url('${esc(a.image)}');background-size:cover;background-position:center;` : ''}"></div>
-          <div class="txt"><h3>${esc(a.title)}</h3><div class="meta">${esc(a.category)} · ${fmtDate(a.date)}</div></div>
+          <div class="txt">${isBreakingActive(a)?'<span class="brk-badge">عاجل</span>':''}<h3>${esc(a.title)}</h3><div class="meta">${esc(a.category)} · ${fmtDate(a.date)}</div></div>
         </a>`).join('')}
       </div>
     </div>`;
@@ -316,14 +376,21 @@ function renderSitePage(data, activeCat){
       inner += `<div class="section-title"><h2>${esc(cat)}</h2><a href="#/category/${encodeURIComponent(cat)}">كل الأخبار &laquo;</a></div>
       <div class="cards-grid">${items.map(a=>`
         <a href="#/article/${a.id}" class="card"><div class="img" style="${a.image ? `background-image:url('${esc(a.image)}');background-size:cover;background-position:center;` : ''}"></div>
-          <div class="body"><span class="cat-tag">${esc(a.category)}</span><h3>${esc(a.title)}</h3><div class="meta">${fmtDate(a.date)}</div></div>
+          <div class="body"><div class="cat-tag-row">${isBreakingActive(a)?'<span class="brk-badge">عاجل</span>':''}<span class="cat-tag">${esc(a.category)}</span></div><h3>${esc(a.title)}</h3><div class="meta">${fmtDate(a.date)}</div></div>
         </a>`).join('')}</div>`;
     });
+    const soon = upcomingArticles(data);
+    if(soon.length){
+      inner += `<div class="section-title"><h2>قادم قريباً</h2></div>
+      <div class="soon-grid">${soon.map(a=>`
+        <div class="soon-card"><span class="soon-badge">${esc(countdownLabel(a))}</span><h4>${esc(a.title)}</h4><div class="meta">${esc(a.category)}</div></div>`).join('')}
+      </div>`;
+    }
   } else {
     inner += `<div class="section-title"><h2>${esc(activeCat)}</h2></div>
     <div class="cards-grid">${list.map(a=>`
       <a href="#/article/${a.id}" class="card"><div class="img" style="${a.image ? `background-image:url('${esc(a.image)}');background-size:cover;background-position:center;` : ''}"></div>
-        <div class="body"><span class="cat-tag">${esc(a.category)}</span><h3>${esc(a.title)}</h3><div class="meta">${fmtDate(a.date)}</div></div>
+        <div class="body"><div class="cat-tag-row">${isBreakingActive(a)?'<span class="brk-badge">عاجل</span>':''}<span class="cat-tag">${esc(a.category)}</span></div><h3>${esc(a.title)}</h3><div class="meta">${fmtDate(a.date)}</div></div>
       </a>`).join('')}</div>`;
   }
   const trending = sortedArticles(data).slice(0,6);
@@ -338,12 +405,17 @@ function renderSitePage(data, activeCat){
 function renderArticlePage(data, id){
   const app = document.getElementById('app');
   const article = data.articles.find(a=>a.id===id);
+  if(article && !isPublished(article)){
+    app.innerHTML = chrome(data, null, `<div class="empty-note" style="margin-top:24px;">هذا الخبر لم يُنشر بعد — ${esc(countdownLabel(article))}. <a href="#/home" style="color:var(--red);font-weight:700;">عودة للرئيسية</a></div>`);
+    return;
+  }
   if(!article){
     app.innerHTML = chrome(data, null, `<div class="empty-note" style="margin-top:24px;">الخبر غير موجود. <a href="#/home" style="color:var(--red);font-weight:700;">عودة للرئيسية</a></div>`);
     return;
   }
   const inner = `<div class="article-page">
     <a href="#/home" class="back-link">&raquo; عودة للرئيسية</a>
+    ${isBreakingActive(article)?'<span class="brk-badge" style="background:var(--red);color:#fff;margin-inline-end:8px;">عاجل</span>':''}
     <span class="cat">${esc(article.category)}</span>
     <h1>${esc(article.title)}</h1>
     <div class="meta">${fmtDate(article.date)}</div>
