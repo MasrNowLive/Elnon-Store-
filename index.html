@@ -267,7 +267,7 @@ footer{border-top:1px solid var(--line);margin-top:10px;padding:36px 20px 26px;b
 <section class="hero">
   <div class="hero-inner">
     <div class="eyebrow">تشكيلة الموسم</div>
-    <h1>الأناقة الحقيقية بين <em>الأسود</em> والذهبي</h1>
+    <h1>كوليكشن <em>مميز</em> من جميع الأصناف</h1>
     <p>هدوم، إكسسوارات، عطور وميكب مختارة بعناية — كل قطعة تحكي فخامة في التفاصيل.</p>
     <a href="#shop" class="btn btn-gold">تسوّق الآن</a>
   </div>
@@ -403,7 +403,6 @@ footer{border-top:1px solid var(--line);margin-top:10px;padding:36px 20px 26px;b
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <script>
 /* ===================== Firebase ===================== */
@@ -418,26 +417,7 @@ const firebaseConfig = {
   measurementId: "G-17CSESHX2Y"
 };
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const rtdb = firebase.database();
-
-function ensureAuth(){
-  return new Promise((resolve, reject)=>{
-    if(auth.currentUser){ resolve(auth.currentUser); return; }
-    let settled = false;
-    const timer = setTimeout(()=>{
-      if(!settled){ settled = true; reject(new Error('auth-timeout')); }
-    }, 10000);
-    const unsub = auth.onAuthStateChanged(u=>{
-      if(u && !settled){ settled = true; clearTimeout(timer); unsub(); resolve(u); }
-    });
-    auth.signInAnonymously().catch(err=>{
-      console.error('auth error', err);
-      if(!settled){ settled = true; clearTimeout(timer); unsub(); reject(err); }
-    });
-  });
-}
-ensureAuth().catch(err=>console.error('initial auth failed', err));
 
 const ICONS = {
   clothes:'<path d="M9 3l3 2 3-2 3 3-2 2v13H8V8L6 6l3-3z"/>',
@@ -713,7 +693,6 @@ async function submitReview(){
   const btn = document.getElementById('submitReviewBtn');
   btn.disabled = true; btn.textContent = 'جارِ النشر...';
   try{
-    await ensureAuth();
     const key = rtdb.ref('reviews/'+p.id).push().key;
     await rtdb.ref('reviews/'+p.id+'/'+key).set({name, rating:pdPickedStars, comment, date:new Date().toISOString().slice(0,10)});
     toast('تم نشر تقييمك، شكرًا ليك');
@@ -814,7 +793,6 @@ function orderCardHtml(o){
 async function confirmReceipt(orderId){
   if(!window.confirm('هل تأكد إنك استلمت المنتج فعلاً؟ التأكيد بيبلغ الإدارة إن الطلب اتسلم وحقه اتدفع كامل.')) return;
   try{
-    await ensureAuth();
     await rtdb.ref('orders/'+orderId).update({status:'received', receivedDate: new Date().toLocaleString('ar-EG')});
     toast('تم تأكيد الاستلام، شكرًا ليك');
     renderOrdersScreen();
@@ -921,7 +899,6 @@ document.getElementById('placeOrderBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true; btn.textContent = 'جارِ الإرسال...';
   try{
-    await ensureAuth();
     let order;
     if(selectedPay==='wallet'){
       const fromPhone = document.getElementById('fromPhone').value.trim();
