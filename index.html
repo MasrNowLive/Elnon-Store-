@@ -477,32 +477,90 @@ let pdQty = 1;
 let pdPickedStars = 0;
 
 /* ===================== Adsterra ads ===================== */
-const AD_KEY_300x250 = 'cd137f60c0e053da667841cdce9b231b';
-const AD_KEY_320x50  = '8d931d1306cd4d6d30597f1ea05d7abf';
-function injectAdsterraBanner(containerId, key, width, height){
+/* Each key below is used in exactly ONE place in the whole site (checkout page only).
+   Reusing the same key in more than one place on the same page makes the ad network
+   silently reject every request after the first — that was the "only the first ad
+   loads" bug. Add more unique ad units from the Adsterra dashboard before wiring up
+   ads anywhere else (home, category, cart, product, orders). */
+/* 24 unique Adsterra keys, grouped by size. Adsterra only allows a key to be invoked
+   ONCE across the whole document — this is a single-page app, so every screen lives
+   in the DOM at once (just CSS-hidden), so "once per page" really means once, full
+   stop, no matter which screen the slot belongs to. Small formats (320x50 / 468x60)
+   go on the main/front pages (home, categories) near the top; the bigger formats
+   (300x250 / 160x300 / 160x600 / 728x90) are reserved for the back pages (cart,
+   checkout, product, order tracking) and pushed toward the bottom of those pages. */
+const AD_300x250 = ['cd137f60c0e053da667841cdce9b231b','fbab99392404b4988180085284aa6456','ca272f4b732628d25f5f538593d7362b','0da4786af1d37e41599dce27cac5f212'];
+const AD_468x60  = ['81ad4e89f5dd256bc6c18100a74dbfe3','a6da5fc16d77883178075b8a23056eb1','b3711cedea80f3b1416f8e5209110790','9a55e5f3bb1c8f4b5bcc65e1d5f57b1d'];
+const AD_160x300 = ['3dc3821844574bcb0d6503c5b01139eb','07d9d9849738905d75ca94a374f36ff7','add48b93ec935467950f0bececc78f2f','e6fb070b99ed37c69d327159f04a12f7'];
+const AD_160x600 = ['7c6efbbedd1500b705736d769aaaa23d','804c82930ba5c5748e6a4bd8b22a4f29','72e9374c152d714c1267ea067ba7587f','df70e158bd1ee714917bfd56ecba0923'];
+const AD_728x90  = ['04d4dba89b8341351b3f541f6dd16ea0','2fe472170aa21360ae7abf3ad473a22b','b97aaf13f2c0b4c3315a6bff5dec977d','a5949c0dc60594d3b20f96dd4eefaa0c'];
+const AD_320x50  = ['8d931d1306cd4d6d30597f1ea05d7abf','4fc251b6419c6f806a8a6cee0e36b9ee','235868dc32b090a7187a90c107135c43','560cbeec307398a0a0f3c55a524bdb3d'];
+function mkAd(list, idx, w, h){ return { key:list[idx], w, h }; }
+function injectAdsterraBanner(containerId, ad){
   const el = document.getElementById(containerId);
   if(!el) return;
   el.innerHTML = '<span class="ad-tag">إعلان</span>';
-  const s1 = document.createElement('script');
-  s1.text = `atOptions = { 'key' : '${key}', 'format' : 'iframe', 'height' : ${height}, 'width' : ${width}, 'params' : {} };`;
-  const s2 = document.createElement('script');
-  s2.src = `https://www.highrevenueformat.com/${key}/invoke.js`;
-  el.appendChild(s1);
-  el.appendChild(s2);
+  const iframe = document.createElement('iframe');
+  iframe.title = 'ad';
+  iframe.scrolling = 'no';
+  iframe.style.cssText = `border:0;overflow:hidden;display:block;width:${ad.w}px;height:${ad.h}px;max-width:100%;`;
+  el.appendChild(iframe);
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(
+    '<!DOCTYPE html><html><head><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden;}</style></head><body>' +
+    '<script>atOptions = {"key":"' + ad.key + '","format":"iframe","height":' + ad.h + ',"width":' + ad.w + ',"params":{}};<\/script>' +
+    '<script src="https://www.highrevenueformat.com/' + ad.key + '/invoke.js"><\/script>' +
+    '</body></html>'
+  );
+  doc.close();
 }
+/* One entry per ad-box id in the whole site, each pointing at its own unique key. */
+const SLOT_ADS = {
+  // main pages (home + category grid) — small formats, kept near the top
+  homeAdTop:    mkAd(AD_320x50, 0, 320, 50),
+  catAdTop:     mkAd(AD_468x60, 0, 468, 60),
+  catAdBottom:  mkAd(AD_320x50, 1, 320, 50),
+  homeAdBottom: mkAd(AD_468x60, 1, 468, 60),
+  // cart — back page
+  cartAdTop:    mkAd(AD_300x250, 0, 300, 250),
+  cartAdBottom: mkAd(AD_160x300, 0, 160, 300),
+  // checkout — back page; the biggest formats are saved for the confirmation step,
+  // further down the flow
+  chkAdTop:           mkAd(AD_468x60, 2, 468, 60),
+  chkAdMid1:          mkAd(AD_320x50, 2, 320, 50),
+  chkAdWallet:        mkAd(AD_468x60, 3, 468, 60),
+  chkAdMid2:          mkAd(AD_300x250, 1, 300, 250),
+  chkAdConfirmTop:    mkAd(AD_160x600, 0, 160, 600),
+  chkAdConfirmBottom: mkAd(AD_728x90, 0, 728, 90),
+  // product page — back page; bigger formats lower down, near the reviews
+  pdAdTop:        mkAd(AD_320x50, 3, 320, 50),
+  pdAdPrice:      mkAd(AD_300x250, 2, 300, 250),
+  pdAdMid:        mkAd(AD_160x300, 1, 160, 300),
+  pdAdRev:        mkAd(AD_160x300, 2, 160, 300),
+  pdAdBeforeList: mkAd(AD_728x90, 1, 728, 90),
+  pdAdBottom:     mkAd(AD_160x600, 1, 160, 600),
+  // order tracking — back page; the biggest formats live here, toward the bottom
+  ordAdTop:         mkAd(AD_160x300, 3, 160, 300),
+  ordAdAfterSearch: mkAd(AD_160x600, 2, 160, 600),
+  ordAdBottom:      mkAd(AD_728x90, 2, 728, 90),
+};
+/* AD_300x250[3], AD_160x600[3] and AD_728x90[3] are left unused as spares for the
+   next slot that gets added. */
+
+function injectAd(slotId){
+  const ad = SLOT_ADS[slotId];
+  if(ad) injectAdsterraBanner(slotId, ad);
+}
+
 function loadStaticAds(){
-  injectAdsterraBanner('homeAdTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('catAdTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('catAdBottom', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('homeAdBottom', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('cartAdTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('cartAdBottom', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('chkAdTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('chkAdMid1', AD_KEY_320x50, 320, 50);
-  injectAdsterraBanner('chkAdWallet', AD_KEY_320x50, 320, 50);
-  injectAdsterraBanner('chkAdMid2', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('chkAdConfirmTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('chkAdConfirmBottom', AD_KEY_300x250, 300, 250);
+  // slots that exist in the DOM from page load: home, cart, checkout
+  ['homeAdTop','catAdTop','catAdBottom','homeAdBottom',
+   'cartAdTop','cartAdBottom',
+   'chkAdTop','chkAdMid1','chkAdWallet','chkAdMid2','chkAdConfirmTop','chkAdConfirmBottom'
+  ].forEach(injectAd);
+  // pdAd*/ordAd* slots are rebuilt on every render of their screen, so those are
+  // injected from renderProductDetail() / renderOrdersScreen() instead.
 }
 
 function toast(msg){
@@ -694,12 +752,7 @@ function renderProductDetail(){
     <div class="ad-slot" style="padding:0;margin:20px 0 0"><div class="ad-box" id="pdAdBottom"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
   `;
   updateStarPickerUI();
-  injectAdsterraBanner('pdAdTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('pdAdPrice', AD_KEY_320x50, 320, 50);
-  injectAdsterraBanner('pdAdMid', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('pdAdRev', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('pdAdBeforeList', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('pdAdBottom', AD_KEY_300x250, 300, 250);
+  ['pdAdTop','pdAdPrice','pdAdMid','pdAdRev','pdAdBeforeList','pdAdBottom'].forEach(injectAd);
 }
 function pdChangeQty(delta){
   pdQty = Math.max(1, pdQty + delta);
@@ -858,9 +911,7 @@ async function renderOrdersScreen(){
 
     <div class="ad-slot" style="padding:0;margin:20px 0 0"><div class="ad-box" id="ordAdBottom"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
   `;
-  injectAdsterraBanner('ordAdTop', AD_KEY_300x250, 300, 250);
-  injectAdsterraBanner('ordAdAfterSearch', AD_KEY_320x50, 320, 50);
-  injectAdsterraBanner('ordAdBottom', AD_KEY_300x250, 300, 250);
+  ['ordAdTop','ordAdAfterSearch','ordAdBottom'].forEach(injectAd);
   if(!ids.length) return;
   const results = [];
   for(const id of ids){
