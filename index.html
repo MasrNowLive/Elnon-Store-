@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Elnon Store</title>
-<meta name="monetag" content="5dff3c03337ff67c4271349ce45916d5">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
@@ -356,6 +355,7 @@ footer{border-top:1px solid var(--line);margin-top:10px;padding:36px 20px 26px;b
   <div class="fs-head"><button class="close-x" id="checkoutBack">✕</button><h2>إتمام الطلب</h2></div>
   <div class="fs-body">
     <div id="formPane">
+      <div class="ad-slot" style="padding:0;margin:0 0 18px"><div class="ad-box" id="chkAdTop"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
       <div class="section-sub">بيانات الشحن</div>
       <div class="field-row">
         <div class="field"><label>الاسم</label><input id="custName" placeholder="اكتب اسمك"></div>
@@ -365,6 +365,8 @@ footer{border-top:1px solid var(--line);margin-top:10px;padding:36px 20px 26px;b
         <select id="custGov"></select>
       </div>
       <div class="field"><label>العنوان بالتفصيل</label><textarea id="custAddress" rows="3" placeholder="الحي، الشارع، رقم العمارة والدور..."></textarea></div>
+
+      <div class="ad-slot" style="padding:0;margin:0 0 18px"><div class="ad-box" id="chkAdMid1"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
 
       <div class="section-sub">طريقة الدفع</div>
       <div class="pay-options">
@@ -377,13 +379,19 @@ footer{border-top:1px solid var(--line);margin-top:10px;padding:36px 20px 26px;b
         <div class="field"><label>الرقم اللي حوّلت منه</label><input type="tel" id="fromPhone" placeholder="01xxxxxxxxx"></div>
         <div class="field"><label>المبلغ المحوّل (ج.م)</label><input type="number" id="fromAmount" placeholder="مثال: 200"></div>
         <div class="notice">بعد إرسال الطلب هتظهر حالته "قيد المراجعة" لحد 45 دقيقة إلى ساعة لحد ما نتأكد من التحويل.</div>
+        <div class="ad-slot" style="padding:0;margin:0 0 16px"><div class="ad-box" id="chkAdWallet"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
       </div>
+
+      <div class="ad-slot" style="padding:0;margin:0 0 18px"><div class="ad-box" id="chkAdMid2"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
+
       <button class="btn btn-gold" style="width:100%" id="placeOrderBtn">تأكيد الطلب</button>
     </div>
     <div id="confirmPane" class="confirm-pane hidden">
       <div class="oid" id="confirmOid">#EN-00000</div>
       <div class="msg" id="confirmMsg">تم استلام طلبك بنجاح</div>
+      <div class="ad-slot" style="padding:0;margin:0 0 18px"><div class="ad-box" id="chkAdConfirmTop"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
       <div class="steps" id="confirmSteps"></div>
+      <div class="ad-slot" style="padding:0;margin:0 0 18px"><div class="ad-box" id="chkAdConfirmBottom"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
       <button class="btn btn-gold" style="width:100%" id="confirmCloseBtn">تم</button>
     </div>
   </div>
@@ -467,6 +475,35 @@ let selectedPay = 'cod';
 let currentProductId = null;
 let pdQty = 1;
 let pdPickedStars = 0;
+
+/* ===================== Adsterra ads ===================== */
+const AD_KEY_300x250 = 'cd137f60c0e053da667841cdce9b231b';
+const AD_KEY_320x50  = '8d931d1306cd4d6d30597f1ea05d7abf';
+function injectAdsterraBanner(containerId, key, width, height){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.innerHTML = '<span class="ad-tag">إعلان</span>';
+  const s1 = document.createElement('script');
+  s1.text = `atOptions = { 'key' : '${key}', 'format' : 'iframe', 'height' : ${height}, 'width' : ${width}, 'params' : {} };`;
+  const s2 = document.createElement('script');
+  s2.src = `https://www.highrevenueformat.com/${key}/invoke.js`;
+  el.appendChild(s1);
+  el.appendChild(s2);
+}
+function loadStaticAds(){
+  injectAdsterraBanner('homeAdTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('catAdTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('catAdBottom', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('homeAdBottom', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('cartAdTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('cartAdBottom', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('chkAdTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('chkAdMid1', AD_KEY_320x50, 320, 50);
+  injectAdsterraBanner('chkAdWallet', AD_KEY_320x50, 320, 50);
+  injectAdsterraBanner('chkAdMid2', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('chkAdConfirmTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('chkAdConfirmBottom', AD_KEY_300x250, 300, 250);
+}
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -657,6 +694,12 @@ function renderProductDetail(){
     <div class="ad-slot" style="padding:0;margin:20px 0 0"><div class="ad-box" id="pdAdBottom"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
   `;
   updateStarPickerUI();
+  injectAdsterraBanner('pdAdTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('pdAdPrice', AD_KEY_320x50, 320, 50);
+  injectAdsterraBanner('pdAdMid', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('pdAdRev', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('pdAdBeforeList', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('pdAdBottom', AD_KEY_300x250, 300, 250);
 }
 function pdChangeQty(delta){
   pdQty = Math.max(1, pdQty + delta);
@@ -815,6 +858,9 @@ async function renderOrdersScreen(){
 
     <div class="ad-slot" style="padding:0;margin:20px 0 0"><div class="ad-box" id="ordAdBottom"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
   `;
+  injectAdsterraBanner('ordAdTop', AD_KEY_300x250, 300, 250);
+  injectAdsterraBanner('ordAdAfterSearch', AD_KEY_320x50, 320, 50);
+  injectAdsterraBanner('ordAdBottom', AD_KEY_300x250, 300, 250);
   if(!ids.length) return;
   const results = [];
   for(const id of ids){
@@ -954,10 +1000,10 @@ renderTiles();
 renderGovs();
 selectCat('acc');
 renderCartCount();
+loadStaticAds();
 document.getElementById('policyLink').addEventListener('click',(e)=>{e.preventDefault(); openInfo('سياسة الاستبدال', POLICY_HTML);});
 </script>
 
-<!-- Monetag ads: Onclick (fires quietly on any tap — no layout space needed) -->
-<script src="https://3nbf4.com/tag.min.js" data-zone="11865773" async data-cfasync="false"></script>
+<!-- Ad network scripts removed — switching to Adsterra. Paste Adsterra ad-unit code here once ready. -->
 </body>
 </html>
