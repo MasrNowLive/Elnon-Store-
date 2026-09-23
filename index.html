@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Elnon Store</title>
-<meta name="google-site-verification" content="eX4OdqpYT6v0Gk8NOjrjOfasmNh1g_j_D_OG0IaExDA" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
@@ -198,6 +197,11 @@ html[dir="rtl"] .gpill[data-g="m"] .slider{transform:translateX(-100%);}
 .review-toggle{background:none;border:1px solid var(--line);color:var(--gold-light);padding:9px 16px;border-radius:var(--radius);font-size:12.5px;font-weight:700;width:100%;margin-bottom:16px;}
 .review-toggle:hover{background:rgba(199,164,90,.08);}
 .review-form{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:20px;}
+
+/* Sizes */
+.pd-sizes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+.size-btn{min-width:44px;background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:9px 14px;border-radius:20px;font-size:13px;font-weight:700;}
+.size-btn.on{border-color:var(--gold);background:rgba(199,164,90,.14);color:var(--gold-light);}
 
 /* Order tracking page */
 .order-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;}
@@ -398,7 +402,7 @@ footer{border-top:1px solid var(--line);margin-top:10px;padding:36px 20px 26px;b
   </div>
 </div>
 
-<!-- ============ INFO PAGE (الشروط / سياسة الاستبدال) ============ -->
+<!-- ============ INFO PAGE ============ -->
 <div class="full-screen" id="infoScreen">
   <div class="fs-head"><button class="close-x" id="infoBack">✕</button><h2 id="infoTitle"></h2></div>
   <div class="fs-body" id="infoBody"></div>
@@ -466,7 +470,7 @@ const POLICY_HTML = `
     <li>لطلب الاستبدال، تواصل معنا على رقم الدعم أو واتساب مع إرفاق صورة للمنتج وسبب الطلب.</li>
   </ul>`;
 
-/* ===================== live state (filled by Firebase listeners) ===================== */
+/* ===================== live state ===================== */
 let DB = { products:[], wallets:{}, social:{fb:'',ig:'',tt:'',wa:''}, support:'', maintenance:false };
 let REVIEWS = {};
 let cart = [];
@@ -476,20 +480,10 @@ let selectedPay = 'cod';
 let currentProductId = null;
 let pdQty = 1;
 let pdPickedStars = 0;
+let pdSize = null;
 
 /* ===================== Adsterra ads ===================== */
-/* Each key below is used in exactly ONE place in the whole site (checkout page only).
-   Reusing the same key in more than one place on the same page makes the ad network
-   silently reject every request after the first — that was the "only the first ad
-   loads" bug. Add more unique ad units from the Adsterra dashboard before wiring up
-   ads anywhere else (home, category, cart, product, orders). */
-/* 24 unique Adsterra keys, grouped by size. Adsterra only allows a key to be invoked
-   ONCE across the whole document — this is a single-page app, so every screen lives
-   in the DOM at once (just CSS-hidden), so "once per page" really means once, full
-   stop, no matter which screen the slot belongs to. Small formats (320x50 / 468x60)
-   go on the main/front pages (home, categories) near the top; the bigger formats
-   (300x250 / 160x300 / 160x600 / 728x90) are reserved for the back pages (cart,
-   checkout, product, order tracking) and pushed toward the bottom of those pages. */
+/* Each key is used in exactly ONE place (Adsterra allows one invoke per key per document). */
 const AD_300x250 = ['cd137f60c0e053da667841cdce9b231b','fbab99392404b4988180085284aa6456','ca272f4b732628d25f5f538593d7362b','0da4786af1d37e41599dce27cac5f212'];
 const AD_468x60  = ['81ad4e89f5dd256bc6c18100a74dbfe3','a6da5fc16d77883178075b8a23056eb1','b3711cedea80f3b1416f8e5209110790','9a55e5f3bb1c8f4b5bcc65e1d5f57b1d'];
 const AD_160x300 = ['3dc3821844574bcb0d6503c5b01139eb','07d9d9849738905d75ca94a374f36ff7','add48b93ec935467950f0bececc78f2f','e6fb070b99ed37c69d327159f04a12f7'];
@@ -516,52 +510,39 @@ function injectAdsterraBanner(containerId, ad){
   );
   doc.close();
 }
-/* One entry per ad-box id in the whole site, each pointing at its own unique key. */
 const SLOT_ADS = {
-  // main pages (home + category grid) — small formats, kept near the top
   homeAdTop:    mkAd(AD_320x50, 0, 320, 50),
   catAdTop:     mkAd(AD_468x60, 0, 468, 60),
   catAdBottom:  mkAd(AD_320x50, 1, 320, 50),
   homeAdBottom: mkAd(AD_468x60, 1, 468, 60),
-  // cart — back page
   cartAdTop:    mkAd(AD_300x250, 0, 300, 250),
   cartAdBottom: mkAd(AD_160x300, 0, 160, 300),
-  // checkout — back page; the biggest formats are saved for the confirmation step,
-  // further down the flow
   chkAdTop:           mkAd(AD_468x60, 2, 468, 60),
   chkAdMid1:          mkAd(AD_320x50, 2, 320, 50),
   chkAdWallet:        mkAd(AD_468x60, 3, 468, 60),
   chkAdMid2:          mkAd(AD_300x250, 1, 300, 250),
   chkAdConfirmTop:    mkAd(AD_160x600, 0, 160, 600),
   chkAdConfirmBottom: mkAd(AD_728x90, 0, 728, 90),
-  // product page — back page; bigger formats lower down, near the reviews
   pdAdTop:        mkAd(AD_320x50, 3, 320, 50),
   pdAdPrice:      mkAd(AD_300x250, 2, 300, 250),
   pdAdMid:        mkAd(AD_160x300, 1, 160, 300),
   pdAdRev:        mkAd(AD_160x300, 2, 160, 300),
   pdAdBeforeList: mkAd(AD_728x90, 1, 728, 90),
   pdAdBottom:     mkAd(AD_160x600, 1, 160, 600),
-  // order tracking — back page; the biggest formats live here, toward the bottom
   ordAdTop:         mkAd(AD_160x300, 3, 160, 300),
   ordAdAfterSearch: mkAd(AD_160x600, 2, 160, 600),
   ordAdBottom:      mkAd(AD_728x90, 2, 728, 90),
 };
-/* AD_300x250[3], AD_160x600[3] and AD_728x90[3] are left unused as spares for the
-   next slot that gets added. */
 
 function injectAd(slotId){
   const ad = SLOT_ADS[slotId];
   if(ad) injectAdsterraBanner(slotId, ad);
 }
-
 function loadStaticAds(){
-  // slots that exist in the DOM from page load: home, cart, checkout
   ['homeAdTop','catAdTop','catAdBottom','homeAdBottom',
    'cartAdTop','cartAdBottom',
    'chkAdTop','chkAdMid1','chkAdWallet','chkAdMid2','chkAdConfirmTop','chkAdConfirmBottom'
   ].forEach(injectAd);
-  // pdAd*/ordAd* slots are rebuilt on every render of their screen, so those are
-  // injected from renderProductDetail() / renderOrdersScreen() instead.
 }
 
 function toast(msg){
@@ -671,7 +652,7 @@ function renderProducts(){
         <div class="rating-line"><span class="stars">${starsHtml(r.avg)}</span><span>${r.count ? `(${r.count})` : 'لا تقييمات بعد'}</span></div>
         ${p.desc?`<p class="desc">${p.desc}</p>`:''}
         <div class="price">${p.price} ج.م</div>
-        <button class="add" onclick="event.stopPropagation();addToCart(${p.id})">أضف للسلة</button>
+        <button class="add" onclick="event.stopPropagation();openProduct(${p.id})">تفاصيل المنتج</button>
       </div>
     </div>`;
   }).join('');
@@ -681,10 +662,11 @@ function renderProducts(){
 function openProduct(id){
   currentProductId = id;
   pdQty = 1;
+  pdSize = null;
   pdPickedStars = 0;
   renderProductDetail();
   openScreen('productScreen');
-  document.getElementById('productBody').scrollTop = 0;
+  document.getElementById('productScreen').scrollTop = 0;
 }
 function renderProductDetail(){
   const p = DB.products.find(x=>x.id===currentProductId);
@@ -709,6 +691,8 @@ function renderProductDetail(){
     <div class="pd-price">${p.price} ج.م</div>
     <div class="ad-slot" style="padding:0;margin:0 0 18px"><div class="ad-box" id="pdAdPrice"><span class="ad-tag">إعلان</span><span class="ad-label">مساحة إعلانية — ضع كود الإعلان هنا</span></div></div>
     ${p.desc ? `<p class="pd-desc">${p.desc}</p>` : ''}
+    ${(p.sizes && p.sizes.length) ? `<div class="section-sub" style="margin-top:0">اختار المقاس</div>
+    <div class="pd-sizes" id="pdSizes">${p.sizes.map(s=>`<button type="button" class="size-btn ${pdSize===s?'on':''}" data-s="${s}" onclick="pickSize('${s}')">${s}</button>`).join('')}</div>` : ''}
     <div class="pd-qty-row">
       <div class="qty-ctrl"><button onclick="pdChangeQty(-1)">-</button><span id="pdQtyVal">${pdQty}</span><button onclick="pdChangeQty(1)">+</button></div>
     </div>
@@ -760,11 +744,19 @@ function pdChangeQty(delta){
   const el = document.getElementById('pdQtyVal');
   if(el) el.textContent = pdQty;
 }
+function pickSize(s){
+  pdSize = s;
+  document.querySelectorAll('#pdSizes .size-btn').forEach(b=>b.classList.toggle('on', b.dataset.s===s));
+}
 function addToCartFromDetail(){
   const p = DB.products.find(x=>x.id===currentProductId);
   if(!p) return;
-  const line = cart.find(x=>x.id===p.id);
-  if(line) line.qty += pdQty; else cart.push({...p, qty:pdQty});
+  const hasSizes = p.sizes && p.sizes.length;
+  if(hasSizes && !pdSize){ toast('اختار المقاس الأول'); return; }
+  const size = hasSizes ? pdSize : '';
+  const k = p.id + '|' + size;
+  const line = cart.find(x=>x.k===k);
+  if(line) line.qty += pdQty; else cart.push({...p, k, size, qty:pdQty});
   renderCartCount();
   toast('اتضاف للسلة');
 }
@@ -805,43 +797,36 @@ async function submitReview(){
 document.getElementById('productBack').addEventListener('click',()=>closeScreen('productScreen'));
 
 /* ===================== cart ===================== */
-function addToCart(id){
-  const p = DB.products.find(x=>x.id===id);
-  const line = cart.find(x=>x.id===id);
-  if(line) line.qty++; else cart.push({...p, qty:1});
-  renderCartCount();
-  toast('اتضاف للسلة');
-}
 function renderCartCount(){
   const count = cart.reduce((a,c)=>a+c.qty,0);
   document.getElementById('cartCount').classList.toggle('hidden', count===0);
   document.getElementById('cartCount').textContent = count;
 }
-function changeQty(id, delta){
-  const line = cart.find(x=>x.id===id);
+function changeQty(k, delta){
+  const line = cart.find(x=>x.k===k);
   if(!line) return;
   line.qty += delta;
-  if(line.qty <= 0) cart = cart.filter(x=>x.id!==id);
+  if(line.qty <= 0) cart = cart.filter(x=>x.k!==k);
   renderCartBody(); renderCartCount();
 }
+function removeFromCart(k){ cart = cart.filter(c=>c.k!==k); renderCartBody(); renderCartCount(); }
 function renderCartBody(){
   const body = document.getElementById('cartBody');
   const total = cart.reduce((a,c)=>a+c.qty*c.price,0);
   document.getElementById('cartTotal').textContent = total + ' ج.م';
-  if(!cart.length){ body.innerHTML = `<div class="small-note" style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px">السلة فاضية دلوقتي</div>`; return; }
+  if(!cart.length){ body.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px">السلة فاضية دلوقتي</div>`; return; }
   body.innerHTML = cart.map(c=>{
     const cat = CATS.find(x=>x.id===c.cat);
     return `<div class="cart-item"><div class="thumb" style="cursor:pointer" onclick="closeScreen('cartScreen');openProduct(${c.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">${ICONS[cat.icon]}</svg></div>
-      <div class="info"><h4 style="cursor:pointer" onclick="closeScreen('cartScreen');openProduct(${c.id})">${c.name}</h4>
+      <div class="info"><h4 style="cursor:pointer" onclick="closeScreen('cartScreen');openProduct(${c.id})">${c.name}${c.size?' <span style="color:var(--gold);font-size:11.5px">(مقاس '+c.size+')</span>':''}</h4>
         <div class="qty-ctrl">
-          <button onclick="changeQty(${c.id},-1)">-</button><span>${c.qty}</span><button onclick="changeQty(${c.id},1)">+</button>
+          <button onclick="changeQty('${c.k}',-1)">-</button><span>${c.qty}</span><button onclick="changeQty('${c.k}',1)">+</button>
         </div>
       </div>
-      <div class="side"><div class="price">${c.price*c.qty} ج.م</div><button class="rm" onclick="removeFromCart(${c.id})">حذف</button></div>
+      <div class="side"><div class="price">${c.price*c.qty} ج.م</div><button class="rm" onclick="removeFromCart('${c.k}')">حذف</button></div>
       </div>`;
   }).join('');
 }
-function removeFromCart(id){ cart = cart.filter(c=>c.id!==id); renderCartBody(); renderCartCount(); }
 
 function openScreen(id){ document.getElementById(id).classList.add('show'); }
 function closeScreen(id){ document.getElementById(id).classList.remove('show'); }
@@ -865,7 +850,7 @@ document.getElementById('checkoutBtn').addEventListener('click',()=>{
 });
 document.getElementById('checkoutBack').addEventListener('click',()=>closeScreen('checkoutScreen'));
 
-/* ===================== my orders (tracked locally by order id) ===================== */
+/* ===================== my orders ===================== */
 document.getElementById('ordersBack').addEventListener('click',()=>closeScreen('ordersScreen'));
 function openOrdersScreen(){ renderOrdersScreen(); openScreen('ordersScreen'); }
 function myOrderIds(){ try{ return JSON.parse(localStorage.getItem('elnon_my_order_ids')||'[]'); }catch(e){ return []; } }
@@ -876,7 +861,7 @@ function saveMyOrderId(id){
 function orderStatusIdx(status){ return CONFIRM_STEPS.findIndex(s=>s.k===status); }
 function orderCardHtml(o){
   const idx = orderStatusIdx(o.status);
-  const itemsTxt = (o.items||[]).map(it=>`${it.name} ×${it.qty}`).join('، ');
+  const itemsTxt = (o.items||[]).map(it=>`${it.name}${it.size?' (مقاس '+it.size+')':''} ×${it.qty}`).join('، ');
   const isShipped = o.status === 'shipped';
   const received = o.status === 'received';
   return `<div class="order-card ${received?'received':''}">
@@ -919,7 +904,7 @@ async function renderOrdersScreen(){
     try{
       const snap = await rtdb.ref('orders/'+id).once('value');
       if(snap.exists()) results.push(snap.val());
-    }catch(e){ /* skip missing/unauthorized */ }
+    }catch(e){ /* skip */ }
   }
   const el = document.getElementById('ordersResults');
   if(el) el.innerHTML = results.length ? results.map(orderCardHtml).join('') : '<div class="no-reviews">مفيش طلبات متاحة حاليًا.</div>';
@@ -1017,7 +1002,7 @@ document.getElementById('placeOrderBtn').addEventListener('click', async ()=>{
       const id = 'EN-'+Math.floor(10000+Math.random()*89999);
       order = {id, name, phone, gov, address, amount:cart.reduce((a,c)=>a+c.qty*c.price,0), status:'paid', date:new Date().toLocaleString('ar-EG'), cod:true};
     }
-    order.items = cart.map(c=>({name:c.name, qty:c.qty, price:c.price}));
+    order.items = cart.map(c=>({name:c.name, qty:c.qty, price:c.price, size:c.size||''}));
     await rtdb.ref('orders/'+order.id).set(order);
     saveMyOrderId(order.id);
     cart = []; renderCartCount();
@@ -1041,7 +1026,7 @@ function renderFooter(){
     <a class="social-btn" href="${social.fb||'#'}" target="_blank" rel="noopener" aria-label="فيسبوك"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 22v-9h3l.5-3.5H13V7.2c0-1 .3-1.7 1.8-1.7H17V2.3C16.6 2.2 15.4 2 14 2c-2.9 0-4.8 1.7-4.8 4.9V9.5H6V13h3.2v9H13z"/></svg></a>
     <a class="social-btn" href="${social.ig||'#'}" target="_blank" rel="noopener" aria-label="انستقرام"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg></a>
     <a class="social-btn" href="${social.tt||'#'}" target="_blank" rel="noopener" aria-label="تيك توك"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 3c.3 2 1.8 3.6 4 3.9v2.6c-1.4 0-2.7-.4-3.9-1.2v6.4a5.4 5.4 0 1 1-4.6-5.4v2.7a2.7 2.7 0 1 0 2 2.6V3h2.5z"/></svg></a>`;
-  document.getElementById('termsLink').addEventListener('click',(e)=>{e.preventDefault(); openInfo('الشروط والأحكام', TERMS_HTML);}, {once:true});
+  document.getElementById('termsLink').onclick = (e)=>{e.preventDefault(); openInfo('الشروط والأحكام', TERMS_HTML);};
 }
 
 function renderGovs(){ document.getElementById('custGov').innerHTML = GOVS.map(g=>`<option>${g}</option>`).join(''); }
@@ -1055,7 +1040,5 @@ renderCartCount();
 loadStaticAds();
 document.getElementById('policyLink').addEventListener('click',(e)=>{e.preventDefault(); openInfo('سياسة الاستبدال', POLICY_HTML);});
 </script>
-
-<!-- Ad network scripts removed — switching to Adsterra. Paste Adsterra ad-unit code here once ready. -->
 </body>
 </html>
